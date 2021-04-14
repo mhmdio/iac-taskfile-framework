@@ -1,10 +1,15 @@
 # https://taskfile.dev
 
 version: '3'
-
+dotenv: ['.env']
+output: prefixed
 vars:
-  GREETING: AES >> Terraform Taskfile!
-  PROFILE: xxx-dev
+env:
+
+includes:
+  aws: ./aws
+  docker: ./docker
+  terraform: ./terraform
 
 tasks:
 
@@ -13,42 +18,3 @@ tasks:
     cmds:
       - echo "{{.GREETING}}"
     silent: true
-
-  main:
-    desc: Main workflow.
-    cmds:
-      - task: init
-      - task: validate
-      - task: plan
-
-  aws-vault:
-    desc: Login using aws-vault.
-    cmds:
-      - aws-vault --version
-      - aws-vault exec {{.PROFILE}} --duration=2h
-    silent: true
-
-  init:
-    desc: Terraform init.
-    cmds:
-      - terraform -chdir=$DIR init
-
-  upgrade:
-    desc: Terraform upgrade.
-    cmds:
-      - terraform -chdir=$DIR init -upgrade=true
-
-  validate:
-    desc: Terraform validate.
-    cmds:
-      - terraform -chdir=$DIR validate
-
-  plan:
-    desc: Terraform plam.
-    cmds:
-      - terraform -chdir=$DIR plan -compact-warnings
-
-  apply:
-    desc: Terraform apply.
-    cmds:
-      - terraform -chdir=$DIR apply -auto-approve -compact-warnings

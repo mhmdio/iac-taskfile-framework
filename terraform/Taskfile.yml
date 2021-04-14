@@ -1,0 +1,37 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+
+  main:
+    desc: Main workflow.
+    cmds:
+      - task: init
+      - task: validate
+      - task: plan
+
+  init:
+    desc: Terraform init.
+    cmds:
+      - terraform -chdir=$DIR init
+
+  upgrade:
+    desc: Terraform upgrade.
+    cmds:
+      - terraform -chdir=$DIR init -upgrade=true
+
+  validate:
+    desc: Terraform validate.
+    cmds:
+      - terraform -chdir=$DIR validate
+
+  plan:
+    desc: Terraform plam.
+    cmds:
+      - terraform -chdir=$DIR plan -compact-warnings
+
+  apply:
+    desc: Terraform apply.
+    cmds:
+      - terraform -chdir=$DIR apply -auto-approve -compact-warnings
