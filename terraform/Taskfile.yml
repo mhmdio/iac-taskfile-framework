@@ -2,36 +2,177 @@
 
 version: '3'
 
+output: prefixed
+
+silent: true
+
+vars:
+  GREETING: Terraform Taskfile!
+  PROJECT: XYZ
+  GIT_PROFILE: xyz-shared
+  REGION: eu-west-1
+
 tasks:
 
-  main:
-    desc: Main workflow.
+  default:
+    desc: Hello MSG.
     cmds:
-      - task: init
+      - echo "{{.GREETING}}"
+    silent: true
+
+  git-login:
+    desc: git access to shared account.
+    cmds:
+      - aws sso login --profile {{.GIT_PROFILE}}
+    silent: true
+
+  ecr-login:
+    desc: AWS ECR access.
+    cmds:
+      - aws ecr get-login-password --region {{.REGION}} | docker login --username AWS --password-stdin {{.ACCOUNT_ID}}.dkr.ecr.{{.REGION}}.amazonaws.com
+    silent: true
+    vars:
+      ACCOUNT_ID:
+        sh: aws sts get-caller-identity | yq e  ".0.Account" -
+
+  test:
+    desc: Test workflow.
+    prefix: test
+    cmds:
+      - task: fmt
       - task: validate
-      - task: plan
+      - task: tflint
+      - task: tfsec
+      - task: tfcheck
+
+  aws-vault:
+    desc: Login using aws-vault.
+    cmds:
+      - aws-vault --debug remove --sessions-only {{.PROJECT}}-{{.ENV}}
+      - aws-vault --version
+      - aws-vault exec {{.PROJECT}}-{{.ENV}} --duration=2h
+    silent: true
+
+  clean:
+    desc: Terraform Clean.
+    cmds:
+      - rm -rf {{.STACK}}/.terraform/
+      - rm -f {{.STACK}}/.terraform.lock.hcl
+    silent: true
 
   init:
     desc: Terraform init.
     cmds:
-      - terraform -chdir=$DIR init
-
+      - terraform -chdir={{.STACK}} init
+    silent: true
+  
   upgrade:
     desc: Terraform upgrade.
     cmds:
-      - terraform -chdir=$DIR init -upgrade=true
+      - terraform -chdir={{.STACK}} init -upgrade=true
+    silent: true
 
   validate:
     desc: Terraform validate.
+    deps:
+      - task: init
     cmds:
-      - terraform -chdir=$DIR validate
+      - terraform -chdir={{.STACK}} validate
+    silent: true
+
+  fmt:
+    desc: Terraform fmt.
+    cmds:
+      - terraform -chdir={{.STACK}} fmt
+    silent: true
 
   plan:
     desc: Terraform plam.
+    deps:
+      - task: init
     cmds:
-      - terraform -chdir=$DIR plan -compact-warnings
+      - terraform -chdir={{.STACK}} plan -compact-warnings
+    silent: true
 
   apply:
     desc: Terraform apply.
+    deps:
+      - task: init
     cmds:
-      - terraform -chdir=$DIR apply -auto-approve -compact-warnings
+      - terraform -chdir={{.STACK}} apply -auto-approve -compact-warnings
+    silent: true
+  
+  output:
+    desc: Terraform output.
+    deps:
+      - task: init
+    cmds:
+      - terraform -chdir={{.STACK}} output
+    silent: true
+
+  cost:
+    desc: infracost - Generate cost estimates from Terraform
+    deps:
+      - task: init
+    cmds:
+      - infracost --tfdir {{.STACK}} --show-skipped
+    silent: true
+
+  tflint:
+    desc: tflint - A Pluggable Terraform Linter
+    dir: $STACK
+    cmds:
+      - tflint --config=../.tflint.hcl --var-file=terraform.tfvars .
+    silent: true
+
+  tfsec:
+    desc: tfsec - a simple tool to detect potential security vulnerabilities in your terraformed infrastructure.
+    dir: $STACK
+    cmds:
+      - rm -rf .terraform
+      - tfsec . --exclude-downloaded-modules --soft-fail --config-file ../.tfsec.yml --tfvars-file terraform.tfvars  --custom-check-dir ../.tfsec --concise-output
+    silent: true
+  
+  tfcheck:
+    desc: checkov - Prevent cloud misconfigurations during build-time for IaC tools
+    dir: $STACK
+    cmds:
+      - checkov --framework terraform --soft-fail --directory .
+    silent: true
+
+  drift:
+    desc: driftctl - Detect, track and alert on infrastructure drift.
+    cmds:
+      - | 
+        driftctl scan \
+        --from tfstate+s3://{{.ACCOUNT_ID}}-{{.REGION}}-tf-state/state/dev-app.tfstate \
+        --from tfstate+s3://{{.ACCOUNT_ID}}-{{.REGION}}-tf-state/state/dev-data.tfstate \
+        --from tfstate+s3://{{.ACCOUNT_ID}}-{{.REGION}}-tf-state/state/dev-network.tfstate
+    silent: true
+    vars:
+      ACCOUNT_ID:
+        sh: aws sts get-caller-identity | yq e  ".0.Account" -
+
+  tfdoc:
+    desc: terraform-docs - A utility to generate documentation from Terraform modules in various output formats
+    dir: $STACK
+    cmds:
+      - terraform-docs markdown . --config ../.terraform-docs.yml --sort-by-required | pbcopy
+    silent: true
+
+  tfenv:
+    desc: tfenv 
+    cmds:
+      - tfenv use
+    silent: true
+
+  inframap:
+    desc: inframap 
+    cmds:
+      - inframap generate --hcl .
+    silent: true
+
+  print:
+    cmds:
+      - echo "{{.ENV}}"
+      - echo "{{.STACK}}"
