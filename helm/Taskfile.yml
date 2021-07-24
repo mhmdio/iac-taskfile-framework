@@ -1,5 +1,14 @@
-# https://taskfile.dev
-
-version: '3'
+version: "3"
 
 tasks:
+  diff:
+    dir: releases/
+    desc: Show releases diff
+    cmds:
+      - helmfile diff
+
+  apply:
+    dir: releases/
+    desc: Apply releases
+    cmds:
+      - helmfile apply
