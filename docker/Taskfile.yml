@@ -1,0 +1,22 @@
+version: "3"
+
+vars:
+    CONTAINER_IMAGE_NAME: mycontainerimage
+    CONTAINER_IMAGE_TAG: {sh: git-rev parse HEAD}
+    CONTAINER_IMAGE: "{{.CONTAINER_IMAGE_NAME}}:{{.CONTAINER_IMAGE_TAG}}"
+
+tasks:
+    build:
+        desc: Build the container image
+        cmds:
+        - docker build -t {{.CONTAINER_IMAGE}} -f Dockerfile .
+
+    enter:
+        desc: Enter into the built container
+        cmds:
+        - docker run -it --rm --entrypoint=sh {{.CONTAINER_IMAGE}}
+
+    push:
+        desc: Push built image
+        cmds:
+        - docker push {{.CONTAINER_IMAGE}}
