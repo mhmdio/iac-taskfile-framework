@@ -11,25 +11,24 @@ Taskfile <https://taskfile.dev/> that contains needed DevOps daily operations ta
   - `aws-vault`
 - [Terraform]()
   - `terraform`
+  - `tfsec`
+  - `tflint`
+  - `check`
+  - `driftctl`
+  - `tfenv`
 - [Docker]()
   - `docker`
 - [Helm]()
   - `helm`
   - `helmfile`
-- [GitHub]()  - SOON!
-  - `gh`
-- [Terragrunt]()  - SOON!
-  - `terragrunt`
-- [Kubernetes]()  - SOON!
-  - `kubectl`
-- [Brew]() (macOS)  - SOON!
-  - `brew`
-- [Chocolatey](https://chocolatey.org/) (windows)  - SOON!
-  - `choco`
-- [1password]()  - SOON!
-  - `1password`
-- [SteamPipe]()  - SOON!
-  - `steampipe`
+- [GitHub]()  
+- [Terragrunt]()  
+- [Kubernetes]()  
+- [Brew]() (macOS)  
+- [Chocolatey](https://chocolatey.org/) (windows)  
+- [Scoop]() (windows)  
+- [1password]()  
+- [SteamPipe]()  
 
 ## How to use
 
