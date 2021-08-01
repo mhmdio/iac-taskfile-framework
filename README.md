@@ -21,6 +21,7 @@ Taskfile <https://taskfile.dev/> that contains needed DevOps daily operations ta
 - [Helm]()
   - `helm`
   - `helmfile`
+- [Ansible]()  
 - [GitHub]()  
 - [Terragrunt]()  
 - [Kubernetes]()  
