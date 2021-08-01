@@ -1,6 +1,13 @@
 # https://taskfile.dev
 
 version: '3'
+dotenv: ['.env']
+output: prefixed
+silent: true
+
+vars:
+  ACCOUNT_ID:
+    sh: aws sts get-caller-identity | yq e  ".0.Account" -
 
 tasks:
 
@@ -10,3 +17,26 @@ tasks:
       - aws-vault --version
       - aws-vault exec {{.PROFILE}} --duration=2h
     silent: true
+
+  aws-vault:
+    desc: Login using aws-vault.
+    cmds:
+      - aws-vault --debug remove --sessions-only {{.PROJECT}}-{{.ENV}}
+      - aws-vault --version
+      - aws-vault exec {{.PROJECT}}-{{.ENV}} --duration=2h
+    silent: true
+
+  git-login:
+    desc: git access to shared account.
+    cmds:
+      - aws sso login --profile {{.GIT_PROFILE}}
+    silent: true
+
+  ecr-login:
+    desc: AWS ECR access.
+    cmds:
+      - aws ecr get-login-password --region {{.REGION}} | docker login --username AWS --password-stdin {{.ACCOUNT_ID}}.dkr.ecr.{{.REGION}}.amazonaws.com
+    silent: true
+    vars:
+      ACCOUNT_ID:
+        sh: aws sts get-caller-identity | yq e  ".0.Account" -
