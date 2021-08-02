@@ -9,6 +9,7 @@ Taskfile <https://taskfile.dev/> that contains needed DevOps daily operations ta
 - [AWS](https://aws.amazon.com/)
   - `awscli`
   - `aws-vault`
+  - `chamber`
 - [Terraform](https://www.terraform.io/)
   - `terraform`
   - `tfsec`
@@ -29,7 +30,10 @@ Taskfile <https://taskfile.dev/> that contains needed DevOps daily operations ta
 - [Chocolatey](https://chocolatey.org/) (windows)  
 - [Scoop](https://scoop.sh/) (windows)  
 - [1password](https://1password.com/)  
-- [SteamPipe](https://steampipe.io/)  
+- [SteamPipe](https://steampipe.io/)
+- DevOps Tools
+  - `direnv`
+  - `gomplate`
 
 ## How to use
 
