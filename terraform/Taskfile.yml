@@ -23,6 +23,7 @@ tasks:
     desc: Terraform Taskfile!
     cmds:
       - echo "{{.GREETING}}"
+      - echo ">> Environment {{.ENVIRONMENT}} Region {{.AWS_REGION}}"
       - task -l
 
   test:
@@ -137,6 +138,12 @@ tasks:
     cmds:
       - terraform-docs markdown . --config ../.terraform-docs.yml --sort-by-required | pbcopy
 
+  tfdoc-v2:
+    desc: terraform-docs - A utility to generate documentation from Terraform modules in various output formats
+    dir: "env/{{.ENV }}/{{.REGION}}"
+    cmds:
+      - terraform-docs markdown . --config ../../../.terraform-docs.yml --output-file README.md
+
   tfenv:
     desc: tfenv 
     cmds:
@@ -148,7 +155,13 @@ tasks:
     cmds:
       - inframap generate --hcl .
 
-
+  kubeconfig:
+    desc: kubeconfig - Allow kubectl access to EKS cluster
+    dir: "env/{{.ENV }}/{{.REGION}}"
+    cmds:
+      - mkdir -p $HOME/.kube
+      - terraform output -raw kubeconfig > $HOME/.kube/config
+      
   print:
     cmds:
       - echo "{{.ENV}}"
