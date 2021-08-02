@@ -6,32 +6,42 @@ Taskfile <https://taskfile.dev/> that contains needed DevOps daily operations ta
 
 ## Operations
 
-- [AWS]()
+- [AWS](https://aws.amazon.com/)
   - `awscli`
   - `aws-vault`
-- [Terraform]()
+- [Terraform](https://www.terraform.io/)
   - `terraform`
   - `tfsec`
   - `tflint`
-  - `check`
+  - `checkov`
   - `driftctl`
   - `tfenv`
-- [Docker]()
+- [Docker](https://www.docker.com/)
   - `docker`
-- [Helm]()
+- [Helm](https://helm.sh/)
   - `helm`
   - `helmfile`
-- [Ansible]()  
-- [GitHub]()  
-- [Terragrunt]()  
-- [Kubernetes]()  
-- [Brew]() (macOS)  
+- [Ansible](https://www.ansible.com/)  
+- [GitHub](https://github.com/)  
+- [Terragrunt](https://terragrunt.gruntwork.io/)  
+- [Kubernetes](https://kubernetes.io/)  
+- [Brew](https://brew.sh/) (macOS)  
 - [Chocolatey](https://chocolatey.org/) (windows)  
-- [Scoop]() (windows)  
-- [1password]()  
-- [SteamPipe]()  
+- [Scoop](https://scoop.sh/) (windows)  
+- [1password](https://1password.com/)  
+- [SteamPipe](https://steampipe.io/)  
 
 ## How to use
+
+### Install Taskfile
+
+one command to install:
+
+```bash
+# For Installation To /usr/local/bin for user wide access with debug logging
+# May require sudo sh
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+```
 
 ### git submodules
 
@@ -75,3 +85,7 @@ tasks:
     silent: true
 
 ```
+
+## Repos using IaC Taskfile framework
+
+- <https://github.com/mhmdio/terraform-templates-base>
