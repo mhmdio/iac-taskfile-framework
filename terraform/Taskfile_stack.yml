@@ -284,3 +284,17 @@ tasks:
     dir: 'generated/security'
     cmds:
       - terraform {{.CLI_ARGS}}
+
+  rover:
+    desc: ℹ️ https://github.com/im2nguyen/rover
+    # dir: ''
+    cmds:
+      - printenv | grep "AWS" > .env
+      - docker run --rm -it \
+          -p 9000:9000 \
+          -v $(pwd):/src \
+          im2nguyen/rover \
+          -tfBackendConfig test.tfbackend \
+          -tfVarsFile test.tfvars \
+          -tfVar max_length=4
+
