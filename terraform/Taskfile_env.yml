@@ -1,0 +1,101 @@
+# https://taskfile.dev
+
+version: '3'
+output: prefixed
+silent: true
+dotenv: ['.env', 'envs/{{.ENVIRONMENT}}/.env']
+
+vars:
+  GREETING: Terraform Taskfile!
+  PLAN: plan.cache
+  PLAN_JSON: plan.json
+  PLAN_SUMMARY: '([.resource_changes[]?.change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'
+
+env:
+  ENVIRONMENT: sandbox
+
+tasks:
+
+  default:
+    desc: ℹ️ Default Task for Terraform Operations
+    cmds:
+      - echo "✔️  {{.GREETING}} - run 'task -l' for more task list"
+
+  clean:
+    desc: ℹ️ Clean Task for Terraform
+    cmds:
+      - rm -rf .terraform/
+      - rm -f .terraform.lock.hcl
+      - rm -f plan.json
+      - rm -f plan.cache
+
+  test:
+    desc: ℹ️ Test Task for Terraform
+    label: 'test-{{.ENVIRONMENT}}'
+    prefix: 'test-{{.ENVIRONMENT}}'
+    deps: [init, fmt, validate, plan]
+
+  init:
+    desc: ℹ️ Init Task for Terraform
+    summary: |
+      Usage: terraform [global options] init [options]
+
+        Initialize a new or existing Terraform working directory by creating
+        initial files, loading any remote state, downloading modules, etc.
+
+        This is the first command that should be run for any new or existing
+        Terraform configuration per machine. This sets up all the local data
+        necessary to run Terraform that is typically not committed to version
+        control.
+
+        This command is always safe to run multiple times. Though subsequent runs
+        may give errors, this command will never delete your configuration or
+        state. Even so, if you have important information, please back it up prior
+        to running this command, just in case.
+    cmds:
+      - terraform init -backend-config=envs/${ENVIRONMENT}/backend.tfvars
+    sources:
+      - .terraform\terraform.tfstate
+    generates:
+      - .terraform\terraform.tfstate
+
+  validate:
+    desc: ℹ️ Validate Task for Terraform
+    cmds:
+      - terraform validate
+
+  fmt:
+    desc: ℹ️ Format Task for Terraform
+    cmds:
+      - terraform fmt -check -diff
+
+  plan:
+    desc: ℹ️ Plan Task for Terraform
+    cmds:
+      - terraform plan -var-file=envs/${ENVIRONMENT}/env.tfvars -out={{.PLAN}}
+      - terraform show --json $PLAN | jq -r "{{.PLAN_SUMMARY}}" > {{.PLAN_JSON}}
+      - echo "✔️  Summary file {{.PLAN_JSON}}"
+
+  apply:
+    desc: ℹ️ Apply Task for Terraform
+    cmds:
+      - terraform apply -auto-approve {{.PLAN}}
+      - echo "✔️  Apply Completed for {{.ENVIRONMENT}}"
+
+  destroy:
+    desc: ℹ️ Destroy Task for Terraform
+    cmds:
+      - terraform destroy -var-file=envs/${ENVIRONMENT}/env.tfvars
+      - echo "✔️  Destroy Completed for {{.ENVIRONMENT}}"
+
+  tfdoc:
+    desc: ℹ️ Documentation Task for Terraform
+    summary: |
+      A utility to generate documentation from Terraform modules in various output formats
+    cmds:
+      - terraform-docs markdown . --output-file README.md
+
+  lambda:zip:
+    desc: ℹ️ Zip Lambda code folder
+    cmds:
+      - zip -r code.zip code/

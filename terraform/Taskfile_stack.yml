@@ -1,0 +1,286 @@
+# https://taskfile.dev
+
+version: '3'
+output: prefixed
+silent: true
+dotenv: ['.env', 'envs/{{.ENVIRONMENT}}/.env']
+
+vars:
+  GREETING: Terraform Taskfile!
+  AWS_PROFILE_NAME: prod
+  PLAN: plan.bin
+  PLAN_JSON: plan.json
+  PLAN_SUMMARY_CREATE: '([.resource_changes[]?.change.actions?]|flatten)| map(select(.=="create")) | length'
+  PLAN_SUMMARY_UPDATE: '([.resource_changes[]?.change.actions?]|flatten)| map(select(.=="update")) | length'
+  PLAN_SUMMARY_READ: '([.resource_changes[]?.change.actions?]|flatten)| map(select(.=="read")) | length'
+  PLAN_SUMMARY_DELETE: '([.resource_changes[]?.change.actions?]|flatten)| map(select(.=="delete")) | length'
+  PLAN_SUMMARY_TERRAFORM_VERSION: '.terraform_version'
+  PLAN_SUMMARY_FORMAT_VERSION: '.format_version'
+  TF_BACKEND_CONFIG: envs/${ENVIRONMENT}/backend.tfvars
+  TF_VAR_FILE: envs/${ENVIRONMENT}/env.tfvars
+  # TF_STATE_FILE: tfstate://envs/${ENVIRONMENT}/terraform.tfstate
+  TF_STATE_FILE: tfstate+s3://prod-iaac/rebuildable/prod-infrastructure.tfstate
+  TF_STATE_PATH: tfstate+s3://prod-iaac/rebuildable
+  TF_CLI:
+  TF_PATH:
+    sh: pwd
+  service: 
+env:
+  ENVIRONMENT: prod
+
+tasks:
+
+  default:
+    desc: ℹ️ Default Task for Terraform Operations - {{now | date "2006-01-02"}}
+    cmds:
+      - echo "✔️  {{.GREETING}} - run 'task -l' for more task list"
+      - echo "💻 {{OS}} - {{ARCH}}"
+  
+  aws-vault:
+    desc: ℹ️ Login to AWS with aws-vault
+    prefix: 'aws-{{.ENVIRONMENT}}'
+    cmds:
+      - aws-vault exec -n {{.AWS_PROFILE_NAME}}
+
+  clean:
+    desc: ℹ️ Clean Task for Terraform
+    cmds:
+      - rm -rf .terraform/
+      - rm -f .terraform.lock.hcl
+      - rm -f terraform.tfstate.*
+      - rm -f plan.json
+      - rm -f plan.cache
+
+  test:
+    desc: ℹ️ Test Task for Terraform
+    label: 'test-{{.ENVIRONMENT}}'
+    prefix: 'test-{{.ENVIRONMENT}}'
+    deps: [init, fmt, validate, plan]
+
+  init:
+    desc: ℹ️ Init Task for Terraform
+    summary: |
+      Usage: terraform [global options] init [options]
+
+        Initialize a new or existing Terraform working directory by creating
+        initial files, loading any remote state, downloading modules, etc.
+
+        This is the first command that should be run for any new or existing
+        Terraform configuration per machine. This sets up all the local data
+        necessary to run Terraform that is typically not committed to version
+        control.
+
+        This command is always safe to run multiple times. Though subsequent runs
+        may give errors, this command will never delete your configuration or
+        state. Even so, if you have important information, please back it up prior
+        to running this command, just in case.
+    cmds:
+      - terraform init -backend-config={{.TF_BACKEND_CONFIG}}
+    sources:
+      - .terraform\terraform.tfstate
+    generates:
+      - .terraform\terraform.tfstate
+  
+  validate:
+    desc: ℹ️ Validate Task for Terraform
+    cmds:
+      - terraform validate
+      - echo "✔️  Validate Completed for {{.ENVIRONMENT}}"
+
+
+  fmt:
+    desc: ℹ️ Format Task for Terraform
+    cmds:
+      - terraform fmt -check -diff
+      - echo "✔️  Format Completed for {{.ENVIRONMENT}}"
+
+  plan:
+    desc: ℹ️ Plan Task for Terraform
+    cmds:
+      - terraform plan -var-file={{.TF_VAR_FILE}} -out={{.PLAN}}
+    #   - terraform show --json {{.PLAN}} > {{.PLAN_JSON}}
+    #   - |
+    #     /bin/cat << EOF
+    #     ─────────────────────────────────────────────────────────────────────────────
+    #     ✔️  🧰 State Summary:
+    #     >> 🗄️   terraform version: {{.terraform_version}}
+    #     >> 📁   format version: {{.format_version}}
+    #     >> ⚙️   create: {{.resource_create}}
+    #     >> 🔧   update: {{.resource_update}}
+    #     >> 🔭   read: {{.resource_read}}
+    #     >> 🪚   delete: {{.resource_delete}}
+    #     ─────────────────────────────────────────────────────────────────────────────
+    #     EOF
+    # vars:
+    #   resource_create:
+    #     sh: /bin/cat {{.PLAN_JSON}} | jq -r '{{.PLAN_SUMMARY_CREATE}}'
+    #   resource_update:
+    #     sh: /bin/cat {{.PLAN_JSON}} | jq -r '{{.PLAN_SUMMARY_UPDATE}}'
+    #   resource_read:
+    #     sh: /bin/cat {{.PLAN_JSON}} | jq -r '{{.PLAN_SUMMARY_READ}}'
+    #   resource_delete:
+    #     sh: /bin/cat {{.PLAN_JSON}} | jq -r '{{.PLAN_SUMMARY_DELETE}}'
+    #   terraform_version:
+    #     sh: /bin/cat {{.PLAN_JSON}} | jq -r '{{.PLAN_SUMMARY_TERRAFORM_VERSION}}'
+    #   format_version:
+    #     sh: /bin/cat {{.PLAN_JSON}} | jq -r '{{.PLAN_SUMMARY_FORMAT_VERSION}}'
+
+  apply:
+    desc: ℹ️ Apply Task for Terraform
+    cmds:
+      - terraform apply -auto-approve {{.PLAN}} 
+      - echo "✔️  Apply Completed for {{.ENVIRONMENT}}"
+
+  destroy:
+    desc: ℹ️ Destroy Task for Terraform
+    cmds:
+      - terraform destroy -var-file={{.TF_VAR_FILE}}
+      - echo "✔️  Destroy Completed for {{.ENVIRONMENT}}"
+
+  import:
+    desc: ℹ️ Import Task for Terraform
+    cmds:
+      - terraform import -var-file={{.TF_VAR_FILE}} {{.CLI_ARGS}}
+
+  output:
+    desc: ℹ️ Output Task for Terraform
+    cmds:
+      - terraform output
+
+  tfdoc:
+    desc: ℹ️ Documentation Task for Terraform
+    summary: |
+      A utility to generate documentation from Terraform modules in various output formats
+    cmds:
+      - terraform-docs markdown . --output-file README.md
+    ignore_error: true
+
+  tflint:
+    desc: ℹ️ Pluggable Terraform Linter
+    summary: |
+      TFLint is a framework where linting is provided by plugins
+    cmds:
+      - tflint --init
+      - tflint --var-file={{.TF_VAR_FILE}} --module --format=compact
+    ignore_error: true
+
+  tfsec:
+    desc: ℹ️ Security scanner for your Terraform code
+    summary: |
+      tfsec uses static analysis of your terraform templates to spot potential security issues.
+    cmds:
+      - tfsec --tfvars-file {{.TF_VAR_FILE}} -f default --gif
+    ignore_error: true
+
+  tfcost:
+    desc: ℹ️ Cloud cost estimates for Terraform
+    summary: |
+      Infracost shows cloud cost estimates for Terraform in pull requests, CLI and CI/CD.
+    cmds:
+      - infracost breakdown --path {{.TF_PATH}} --terraform-plan-flags "-var-file={{.TF_VAR_FILE}}"
+    ignore_error: true
+
+  tfdrift:
+    desc: ℹ️ Catch infrastructure drift
+    summary: |
+      driftctl is a free and open-source CLI that warns of infrastructure drift and fills in the missing piece in your DevSecOps toolbox.
+    cmds:
+      - driftctl scan --from {{.TF_STATE_FILE}}
+    ignore_error: true
+
+  tfsteam:
+    desc: ℹ️ Query cloud services with SQL
+    summary: |
+      The extensible SQL interface to your favorite cloud APIs
+    cmds:
+      - steampipe plugin update --all
+      - steampipe service start
+      - steampipe query "select * from aws_s3_bucket"
+    ignore_error: true
+    
+  tf13:init:
+    desc: ℹ️ Terraform 0.13 Init
+    cmds:
+      - ./terraform13 init -backend-config={{.TF_BACKEND_CONFIG}}
+
+  tf13:plan:
+    desc: ℹ️ Terraform 0.13 Plan
+    cmds:
+      - ./terraform13 plan -var-file={{.TF_VAR_FILE}}                                                                        
+
+  tf13:import:
+    desc: ℹ️ Terraform 0.13 Import
+    cmds:
+      - ./terraform13 import -var-file={{.TF_VAR_FILE}} {{.CLI_ARGS}}                                                                
+
+  tf13:apply:
+    desc: ℹ️ Terraform 0.13 Apply
+    cmds:
+      - ./terraform13 apply -var-file={{.TF_VAR_FILE}}                                                                         
+
+  terraformer:ls:
+    desc: ℹ️ Terraformer list all AWS resources
+    cmds:
+      - terraformer import aws list
+
+  terraformer:import:
+    desc: ℹ️ Terraformer Import
+    cmds:
+      - terraformer import aws --profile "" --path-output generated --path-pattern {output}/{service} --resources {{.CLI_ARGS}}
+
+  terraformer:import:compact:
+    desc: ℹ️ Terraformer Compact Import
+    cmds:
+      - terraformer import aws --profile "" --path-output generated --path-pattern {output} --compact --resources {{.CLI_ARGS}}
+
+  tf13:cli:
+    desc: ℹ️ Terraform 0.13 Cli args
+    # dir: 'generated/{{.service}}'
+    dir: 'generated/'
+    cmds:
+      # - ../../terraform13 {{.CLI_ARGS}}
+      - ../terraform13 {{.CLI_ARGS}}
+
+  tfdrift-all:
+    desc: ℹ️ Drift all state files
+    cmds:
+      - | 
+        driftctl scan \
+        --from {{.TF_STATE_PATH}}/prod-infrastructure-app.tfstate \
+        --from {{.TF_STATE_PATH}}/prod-infrastructure-data.tfstate \
+        --from {{.TF_STATE_PATH}}/prod-infrastructure-mgmt.tfstate \
+        --from {{.TF_STATE_PATH}}/prod-infrastructure-network.tfstate \
+        --from {{.TF_STATE_PATH}}/prod-infrastructure-security.tfstate \
+        --from {{.TF_STATE_FILE}}  \
+        --output html://iac-tf-drift-all.html
+    ignore_error: true
+
+  stack:app:
+    desc: ℹ️ Terraform App Stack Cli args
+    dir: 'generated/app'
+    cmds:
+      - terraform {{.CLI_ARGS}}
+
+  stack:data:
+    desc: ℹ️ Terraform Data Stack Cli args
+    dir: 'generated/data'
+    cmds:
+      - terraform {{.CLI_ARGS}}
+
+  stack:mgmt:
+    desc: ℹ️ Terraform MGMT Stack Cli args
+    dir: 'generated/mgmt'
+    cmds:
+      - terraform {{.CLI_ARGS}}
+
+  stack:network:
+    desc: ℹ️ Terraform Network Stack Cli args
+    dir: 'generated/network'
+    cmds:
+      - terraform {{.CLI_ARGS}}
+
+  stack:security:
+    desc: ℹ️ Terraform Security Stack Cli args
+    dir: 'generated/security'
+    cmds:
+      - terraform {{.CLI_ARGS}}
